@@ -1,0 +1,26 @@
+{
+  "name": "sokoban-game",
+  "version": "1.0.0",
+  "description": "推箱子游戏 - 一个经典的益智游戏",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "sokoban",
+    "game",
+    "puzzle",
+    "javascript",
+    "html",
+    "css"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "http": "0.0.1-security"
+  },
+  "devDependencies": {
+  }
+}
