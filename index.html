@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>推箱子游戏</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .game-container {
+            max-width: 800px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        
+        /* 游戏板样式 */
+        .game-board {
+            display: grid;
+            grid-gap: 2px;
+            background-color: #333;
+            border: 3px solid #555;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .wall {
+            background-color: #8B4513;
+        }
+        
+        .player {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: #4169E1;
+            position: relative;
+        }
+        
+        .box {
+            width: 30px;
+            height: 30px;
+            background-color: #FF6347;
+            border-radius: 5px;
+        }
+        
+        .target {
+            background-color: rgba(0, 255, 0, 0.3);
+            border-radius: 5px;
+        }
+        
+        .box.target {
+            background-color: #32CD32;
+        }
+        
+        /* 控制台样式 */
+        .console-container {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            z-index: 1000;
+            width: 300px;
+        }
+        
+        .console-header {
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .console-close {
+            cursor: pointer;
+        }
+        
+        .console-buttons button {
+            margin: 5px;
+            padding: 8px 12px;
+        }
+        
+        .status-bar {
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: #eee;
+            border-radius: 5px;
+            text-align: center;
+            width: 100%;
+        }
+        
+        /* 按钮样式 */
+        .btn {
+            padding: 8px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .direction-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(3, 60px);
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .dir-btn {
+            width: 100%;
+            height: 100%;
+            font-size: 20px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .dir-btn:active {
+            background-color: #5a6268;
+        }
+        
+        .up-btn {
+            grid-column: 2;
+            grid-row: 1;
+        }
+        
+        .left-btn {
+            grid-column: 1;
+            grid-row: 2;
+        }
+        
+        .right-btn {
+            grid-column: 3;
+            grid-row: 2;
+        }
+        
+        .down-btn {
+            grid-column: 2;
+            grid-row: 3;
+        }
+        
+        .control-buttons {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        /* 密码输入框样式 */
+        #password-prompt {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            z-index: 1000;
+            width: 300px;
+        }
+        
+        /* 新增的直达关卡输入框样式 */
+        .level-jump-control {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .level-jump-control input {
+            width: 50px;
+            padding: 5px;
+            margin-right: 5px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="status-bar">
+            关卡: <span id="level-display">1</span> /
+            <span id="total-levels">0</span>
+            步数: <span id="step-count">0</span>
+        </div>
+        
+        <div class="direction-buttons">
+            <button class="dir-btn up-btn" id="up-btn">↑</button>
+            <button class="dir-btn left-btn" id="left-btn">←</button>
+            <button class="dir-btn right-btn" id="right-btn">→</button>
+            <button class="dir-btn down-btn" id="down-btn">↓</button>
+        </div>
+        
+        <div class="game-board" id="board"></div>
+        
+        <div class="control-buttons">
+            <button class="btn btn-primary" id="prev-level">上一关</button>
+            <button class="btn btn-danger" id="reset">重置</button>
+        </div>
+    </div>
+
+    <!-- 控制台 -->
+    <div class="console-container" id="console">
+        <div class="console-header">
+            <span>开发者控制台</span>
+            <span class="console-close" id="console-close">×</span>
+        </div>
+        <div class="console-buttons">
+            <button class="btn btn-primary" id="teleport-boxes">传送箱子</button>
+            <button class="btn btn-success" id="win-game">直接胜利</button>
+            <button class="btn btn-danger" id="reset-pos">重置位置</button>
+            
+            <!-- 新增的直达关卡控制 -->
+            <div class="level-jump-control">
+                <input type="number" id="jump-level-input" min="1" max="17" placeholder="关卡">
+                <button class="btn btn-primary" id="jump-level-btn">直达</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 密码输入框 -->
+    <div id="password-prompt">
+        <div class="console-header">
+            <span>请输入开发者密码</span>
+        </div>
+        <div>
+            <input type="password" id="password-input" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+            <button class="btn btn-primary" id="submit-password">提交</button>
+        </div>
+    </div>
+
+    <script>
+        // 游戏状态
+        const gameState = {
+            level: 0,
+            steps: 0,
+            playerPos: { x: 0, y: 0 },
+            boxes: [],
+            targets: [],
+            board: [],
+            boxTapCount: 0,
+            lastTappedBox: null,
+            devPassword: "sokoban123" // 开发者密码
+        };
+
+        // 关卡设计
+        // 关卡数组定义（20关）
+        const levels = [
+            { // 第1关 - 基础教学关
+                board: [
+                    "########",
+                    "#......#",
+                    "#..@ $.#",  // @是玩家，$是箱子，.是目标点
+                    "#......#",
+                    "########"
+                ],
+                targets: [{x: 4, y: 2}]
+            },
+            { // 第2关 - L型路径
+                board: [
+                    " ###### ",
+                    " #    # ",
+                    "## $  ##",
+                    "# @ $  #",
+                    "## .  ##",
+                    " #    # ",
+                    " ###### "
+                ],
+                targets: [{x: 4, y: 4}]
+            },
+            { // 第3关 - 双箱挑战
+                board: [
+                    " ###### ",
+                    " # . .# ",
+                    " # $$ # ",
+                    "## @ ## ",
+                    " #    # ",
+                    " ###### "
+                ],
+                targets: [{x: 3, y: 1}, {x: 5, y: 1}]
+            },
+            { // 第4关 - 迷宫初体验
+                board: [
+                    "########",
+                    "#  ..  #",
+                    "# $  $ #",
+                    "#  @   #",
+                    "########"
+                ],
+                targets: [{x: 3, y: 1}, {x: 4, y: 1}]
+            },
+            { // 第5关 - 对称推箱
+                board: [
+                    " ####### ",
+                    " #  .  # ",
+                    " # $ $ # ",
+                    "## @  ## ",
+                    " # . . # ",
+                    " ####### "
+                ],
+                targets: [{x: 3, y: 1}, {x: 5, y: 4}]
+            },
+            { // 第6关 - 狭窄通道
+                board: [
+                    " ####### ",
+                    " # . . # ",
+                    " # $ $ # ",
+                    "#  @   # ",
+                    " ####### "
+                ],
+                targets: [{x: 3, y: 1}, {x: 5, y: 1}]
+            },
+            { // 第7关 - 对称布局（原保留关卡）
+                board: [
+                    "  #######  ",
+                    "###     ###",
+                    "#  # @ #  #",
+                    "# # $ $ # #",
+                    "# #  .  # #",
+                    "# ####### #",
+                    "#         #",
+                    "###########"
+                ],
+                targets: [{x: 5, y: 4}, {x: 7, y: 4}]
+            },
+            { // 第8关 - 中心突破（原保留关卡）
+                board: [
+                    "###########",
+                    "#.......  #",
+                    "#.#####   #",
+                    "#.#   # # #",
+                    "#.# #   # #",
+                    "# #@$ $ # #",
+                    "# ##### # #",
+                    "#    $  . #",
+                    "###########"
+                ],
+                targets: [{x: 2, y: 1}, {x: 9, y: 1}, {x: 9, y: 7}]
+            },
+            { // 第9关 - 双层路径
+                board: [
+                    " ###### ",
+                    " # .. # ",
+                    " # $@ # ",
+                    " # $  # ",
+                    " # .  # ",
+                    " ###### "
+                ],
+                targets: [{x: 3, y: 1}, {x: 4, y: 1}]
+            },
+            { // 第10关 - 紧凑型布局
+                board: [
+                    " ####### ",
+                    " # . . # ",
+                    "## $ $ ##",
+                    "#  @    #",
+                    "######## "
+                ],
+                targets: [{x: 3, y: 1}, {x: 5, y: 1}]
+            },
+            { // 第11关 - 墙角推箱
+                board: [
+                    " ###### ",
+                    " #  ..# ",
+                    "## $$ ##",
+                    "# @    #",
+                    " ###### "
+                ],
+                targets: [{x: 4, y: 1}, {x: 5, y: 1}]
+            },
+            { // 第12关 - 紧凑双目标（原保留关卡）
+                board: [
+                    " #### ",
+                    "#  . #",  
+                    "# $  #",
+                    "# @$ #",  
+                    "#   . #",  
+                    " ##### "
+                ],
+                targets: [{x: 4, y: 1}, {x: 5, y: 4}]
+            },           
+            
+            { // 第13关 - 嵌套囚笼
+                board: [
+                    "########",
+                    "#......#",
+                    "#.## # #",
+                    "#.# $$ #",
+                    "#.#@ # #",
+                    "#. .  #",
+                    "#......#",
+                    "########"
+                ],
+                targets: [{x:4,y:5}],
+                hint: "需要先释放内层箱子"
+            },
+            { // 第14关 - 十字封锁
+                board: [
+                    " #####",
+                    "  . .#",
+                    "# $ $#",
+                    "## @ #",
+                    "# $ $#",
+                    "#. . #",
+                    "##### "
+                ],
+                targets: [{x:2,y:1}, {x:4,y:1}],
+                hint: "对称操作两侧箱子"
+            },
+            { // 第15关 - 螺旋迷宫
+                board: [
+                    "#######",
+                    "#.....#",
+                    "# ### #",
+                    "# #@# #",
+                    "# $ . #",
+                    "# .# ##",
+                    "####  #",
+                    " #### #",
+                    "     ##"
+                ],
+                targets: [{x:4,y:4}, {x:5,y:5}],
+                hint: "注意外环通道"
+            },
+            { // 第16关 - 死角挑战
+                board: [
+                    "########",
+                    "#......#",
+                    "#.#####",
+                    "#.#  $#",
+                    "#.# $$#",
+                    "#.#@ ##",
+                    "#.....#",
+                    "########"
+                ],
+                targets: [{x:6,y:3}, {x:5,y:4}],
+                hint: "避免将箱子推入右下角"
+            },
+            { // 第17关 - 隧道穿梭
+                board: [
+                    "###########",
+                    "#     #   #",
+                    "# $ $ # $ #",
+                    "#     #   #",
+                    "### @ #####",
+                    "#  .#     #",
+                    "# $ # $ $ #",
+                    "#   #     #",
+                    "###########"
+                ],
+                targets: [{x:5,y:5}, {x:6,y:7}],
+                hint: "合理使用中央通道"
+            },
+            { // 第18关 - 双重回廊
+                board: [
+                    "###########",
+                    "#...#...#.#",
+                    "#.$ $ $ $.#",
+                    "#...#...#.#",
+                    "#@$ $ $ $ #",
+                    "#...#...#.#",
+                    "#.$ $ $ $.#",
+                    "#...#...#.#",
+                    "###########"
+                ],
+                targets: [{x:3,y:1}, {x:7,y:1}, {x:3,y:7}, {x:7,y:7}],
+                hint: "分层解决上下区域"
+            },
+            { // 第19关 - 锁中谜题
+                board: [
+                    "###########",
+                    "#...#...#.#",
+                    "#.$###$.# #",
+                    "#.#   #.$ #",
+                    "#.#@  #.$ #",
+                    "#.#   #.$ #",
+                    "#.$###$.# #",
+                    "#...#...#.#",
+                    "###########"
+                ],
+                targets: [{x:3,y:2}, {x:7,y:2}, {x:3,y:6}, {x:7,y:6}],
+                hint: "必须最后处理中央箱子"
+            },
+            { // 第20关 - 终极牢笼
+                board: [
+                    "############",
+                    "#   ####   #",
+                    "# $ #  # $ #",
+                    "#   #  #   #",
+                    "### @ ### ##",
+                    "# .# #  #  #",
+                    "# $ #  # $ #",
+                    "#   ####   #",
+                    "############"
+                ],
+                targets: [{x:3,y:5}, {x:5,y:5}, {x:7,y:5}, {x:9,y:5}],
+                hint: "先解放两侧的箱子"
+            }
+        ];
+
+
+        
+
+
+        // 元素
+        const boardElement = document.getElementById('board');
+        const levelDisplay = document.getElementById('level-display');
+        const totalLevels = document.getElementById('total-levels');
+        const stepCount = document.getElementById('step-count');
+        const prevLevelBtn = document.getElementById('prev-level');
+        const resetBtn = document.getElementById('reset');
+        
+        // 方向键按钮
+        const upBtn = document.getElementById('up-btn');
+        const leftBtn = document.getElementById('left-btn');
+        const rightBtn = document.getElementById('right-btn');
+        const downBtn = document.getElementById('down-btn');
+        
+        // 控制台元素
+        const consoleElement = document.getElementById('console');
+        const passwordPrompt = document.getElementById('password-prompt');
+        const passwordInput = document.getElementById('password-input');
+        const submitPasswordBtn = document.getElementById('submit-password');
+        const consoleCloseBtn = document.getElementById('console-close');
+        const teleportBoxesBtn = document.getElementById('teleport-boxes');
+        const winGameBtn = document.getElementById('win-game');
+        const resetPosBtn = document.getElementById('reset-pos');
+
+        // 新增的控制台直达关卡元素
+        const jumpLevelInput = document.getElementById('jump-level-input');
+        const jumpLevelBtn = document.getElementById('jump-level-btn');
+
+        // 初始化游戏
+        function initGame() {
+            totalLevels.textContent = levels.length;
+            
+            // 尝试加载游戏进度
+            let loaded = false;
+            try {
+                loaded = loadGameProgress();
+                
+                // 验证加载后的游戏状态
+                if (loaded) {
+                    // 确保关卡索引有效
+                    if (gameState.level < 0 || gameState.level >= levels.length) {
+                        console.error('Invalid level index, resetting to level 0');
+                        loaded = false;
+                    } else {
+                        // 确保所有必要的游戏状态属性存在
+                        const requiredProps = ['playerPos', 'boxes', 'targets', 'board'];
+                        const missingProps = requiredProps.filter(prop => !gameState[prop]);
+                        
+                        if (missingProps.length > 0) {
+                            console.error(`Missing game state properties: ${missingProps.join(', ')}`);
+                            loaded = false;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Error loading game progress:', e);
+                loaded = false;
+            }
+            
+            // 如果加载失败或状态无效，重新加载关卡
+            if (!loaded) {
+                console.log('Loading fresh level');
+                loadLevel(gameState.level);
+            }
+            
+            renderBoard();
+            setupControls();
+        }
+
+        // 显示密码输入
+        function showPasswordPrompt() {
+            passwordPrompt.style.display = 'block';
+            passwordInput.focus();
+        }
+
+        // 隐藏密码输入
+        function hidePasswordPrompt() {
+            passwordPrompt.style.display = 'none';
+            passwordInput.value = '';
+        }
+
+        // 显示控制台
+        function showConsole() {
+            consoleElement.style.display = 'block';
+        }
+
+        // 隐藏控制台
+        function hideConsole() {
+            consoleElement.style.display = 'none';
+        }
+
+        // 保存游戏进度到localStorage
+        function saveGameProgress() {
+            const gameProgress = {
+                level: gameState.level,
+                steps: gameState.steps,
+                playerPos: gameState.playerPos,
+                boxes: gameState.boxes
+            };
+            localStorage.setItem('sokobanProgress', JSON.stringify(gameProgress));
+        }
+
+        // 从localStorage加载游戏进度
+        function loadGameProgress() {
+            try {
+                const savedProgress = localStorage.getItem('sokobanProgress');
+                if (savedProgress) {
+                    const parsedProgress = JSON.parse(savedProgress);
+                    
+                    // 验证关卡是否有效
+                    if (parsedProgress.level >= 0 && parsedProgress.level < levels.length) {
+                        const level = levels[parsedProgress.level];
+                        
+                        // 确保关卡数据存在
+                        if (!level || !level.board || level.board.length === 0) {
+                            console.error('Invalid level data');
+                            return false;
+                        }
+                        
+                        // 加载游戏进度
+                        gameState.level = parsedProgress.level;
+                        gameState.steps = parsedProgress.steps || 0;
+                        gameState.playerPos = parsedProgress.playerPos || { x: 0, y: 0 };
+                        gameState.boxes = parsedProgress.boxes || [];
+                        gameState.targets = level.targets || [];
+                        gameState.board = [];
+                        
+                        // 重新解析地图以确保board数据完整
+                        for (let y = 0; y < level.board.length; y++) {
+                            const row = level.board[y].split('');
+                            gameState.board.push([]);
+                            for (let x = 0; x < row.length; x++) {
+                                const cell = row[x];
+                                if (cell === '#') {
+                                    gameState.board[y][x] = '#';
+                                } else {
+                                    gameState.board[y][x] = ' ';
+                                }
+                            }
+                        }
+                        
+                        levelDisplay.textContent = gameState.level + 1;
+                        stepCount.textContent = gameState.steps;
+                        
+                        // 设置游戏板样式
+                        const rows = level.board.length;
+                        const cols = level.board[0].length;
+                        boardElement.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
+                        boardElement.style.gridTemplateRows = `repeat(${rows}, 40px)`;
+                        
+                        console.log('Game progress loaded successfully');
+                        return true;
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load game progress:', e);
+                // 清除损坏的存储数据
+                localStorage.removeItem('sokobanProgress');
+            }
+            console.log('No valid game progress found');
+            return false;
+        }
+
+        // 加载指定关卡
+        function loadLevel(levelIndex) {
+            const level = levels[levelIndex];
+            gameState.level = levelIndex;
+            gameState.steps = 0;
+            gameState.board = [];
+            gameState.boxes = [];
+            gameState.targets = level.targets;
+            gameState.boxTapCount = 0;
+            gameState.lastTappedBox = null;
+
+            // 解析地图
+            for (let y = 0; y < level.board.length; y++) {
+                const row = level.board[y].split('');
+                gameState.board.push([]);
+                for (let x = 0; x < row.length; x++) {
+                    const cell = row[x];
+                    if (cell === '@') {
+                        gameState.playerPos = { x, y };
+                        gameState.board[y][x] = ' ';
+                    } else if (cell === '$') {
+                        gameState.boxes.push({ x, y });
+                        gameState.board[y][x] = ' ';
+                    } else if (cell === '#') {
+                        gameState.board[y][x] = '#';
+                    } else if (cell === '.') {
+                        gameState.board[y][x] = ' ';
+                    } else {
+                        gameState.board[y][x] = ' ';
+                    }
+                }
+            }
+
+            levelDisplay.textContent = levelIndex + 1;
+            stepCount.textContent = 0;
+
+            // 设置游戏板样式
+            const rows = level.board.length;
+            const cols = level.board[0].length;
+            boardElement.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
+            boardElement.style.gridTemplateRows = `repeat(${rows}, 40px)`;
+        }
+
+        // 绘制游戏板
+function renderBoard() {
+    boardElement.innerHTML = '';
+    
+    // 确保游戏状态完整
+    if (!gameState || gameState.level < 0 || gameState.level >= levels.length) {
+        console.error('Invalid game state');
+        return;
+    }
+    
+    const level = levels[gameState.level];
+    if (!level || !level.board || level.board.length === 0) {
+        console.error('Invalid level data');
+        return;
+    }
+    
+    // 确保必要的游戏状态属性存在
+    if (!gameState.board) gameState.board = [];
+    if (!gameState.targets) gameState.targets = [];
+    if (!gameState.playerPos) gameState.playerPos = { x: 0, y: 0 };
+    if (!gameState.boxes) gameState.boxes = [];
+    
+    for (let y = 0; y < level.board.length; y++) {
+        if (!gameState.board[y]) gameState.board[y] = [];
+        
+        for (let x = 0; x < level.board[y].length; x++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.dataset.x = x;
+            cell.dataset.y = y;
+            
+            // 设置墙壁
+            if (gameState.board[y][x] === '#') {
+                cell.classList.add('wall');
+            }
+            
+            // 设置目标点
+            const isTarget = gameState.targets.some(t => t && t.x === x && t.y === y);
+            if (isTarget) {
+                cell.classList.add('target');
+            }
+            
+            // 设置玩家
+            if (gameState.playerPos && x === gameState.playerPos.x && y === gameState.playerPos.y) {
+                const player = document.createElement('div');
+                player.className = 'player';
+                cell.appendChild(player);
+            }
+            
+            // 设置箱子
+            const boxIndex = gameState.boxes.findIndex(b => b && b.x === x && b.y === y);
+            if (boxIndex >= 0) {
+                const box = document.createElement('div');
+                box.className = 'box';
+                if (isTarget) {
+                    box.classList.add('target');
+                }
+                box.dataset.index = boxIndex;
+                cell.appendChild(box);
+            }
+            
+            boardElement.appendChild(cell);
+        }
+    }
+}
+
+// 检查是否胜利
+function checkWin() {
+    return gameState.targets.every(target => {
+        return gameState.boxes.some(box => 
+            box.x === target.x && box.y === target.y
+        );
+    });
+}
+
+// 移动玩家
+function movePlayer(dx, dy) {
+    const newX = gameState.playerPos.x + dx;
+    const newY = gameState.playerPos.y + dy;
+    
+    // 检查是否超出边界或是墙
+    if (
+        newX < 0 || newY < 0 ||
+        newY >= gameState.board.length ||
+        newX >= gameState.board[newY].length ||
+        gameState.board[newY][newX] === '#'
+    ) {
+        return false;
+    }
+    
+    // 检查是否碰到箱子
+    const boxIndex = gameState.boxes.findIndex(b => b.x === newX && b.y === newY);
+    if (boxIndex >= 0) {
+        const box = gameState.boxes[boxIndex];
+        const boxNewX = box.x + dx;
+        const boxNewY = box.y + dy;
+        
+        // 检查箱子是否可以移动
+        if (
+            boxNewX < 0 || boxNewY < 0 ||
+            boxNewY >= gameState.board.length ||
+            boxNewX >= gameState.board[boxNewY].length ||
+            gameState.board[boxNewY][boxNewX] === '#' ||
+            gameState.boxes.some(b => b.x === boxNewX && b.y === boxNewY)
+        ) {
+            return false;
+        }
+        
+        // 移动箱子
+        box.x = boxNewX;
+        box.y = boxNewY;
+    }
+    
+    // 移动玩家
+    gameState.playerPos.x = newX;
+    gameState.playerPos.y = newY;
+    gameState.steps++;
+    stepCount.textContent = gameState.steps;
+    
+    if (checkWin()) {
+        setTimeout(() => {
+            alert('恭喜通关！即将进入下一关');
+            nextLevel();
+        }, 100);
+    }
+    
+    return true;
+}
+
+// 上一关
+function prevLevel() {
+    if (gameState.level > 0) {
+        loadLevel(gameState.level - 1);
+        renderBoard();
+    } else {
+        alert('已经是第一关了');
+    }
+}
+
+// 下一关
+function nextLevel() {
+    if (gameState.level < levels.length - 1) {
+        loadLevel(gameState.level + 1);
+        renderBoard();
+    } else {
+        alert('恭喜你通关了所有关卡！');
+    }
+}
+
+// 重置当前关卡
+function resetLevel() {
+    loadLevel(gameState.level);
+    renderBoard();
+}
+
+// 设置控制按钮
+        function setupControls() {
+            prevLevelBtn.onclick = () => {
+                prevLevel();
+                saveGameProgress();
+            };
+            resetBtn.onclick = () => {
+                resetLevel();
+                saveGameProgress();
+            };
+            
+            // 方向键控制
+            upBtn.onclick = () => {
+                if (movePlayer(0, -1)) {
+                    renderBoard();
+                    saveGameProgress();
+                }
+            };
+            leftBtn.onclick = () => {
+                if (movePlayer(-1, 0)) {
+                    renderBoard();
+                    saveGameProgress();
+                }
+            };
+            rightBtn.onclick = () => {
+                if (movePlayer(1, 0)) {
+                    renderBoard();
+                    saveGameProgress();
+                }
+            };
+            downBtn.onclick = () => {
+                if (movePlayer(0, 1)) {
+                    renderBoard();
+                    saveGameProgress();
+                }
+            };
+            
+            // 键盘控制
+            document.onkeydown = (e) => {
+                let moved = false;
+                switch (e.key) {
+                    case 'ArrowUp': e.preventDefault(); moved = movePlayer(0, -1); break;
+                    case 'ArrowLeft': e.preventDefault(); moved = movePlayer(-1, 0); break;
+                    case 'ArrowRight': e.preventDefault(); moved = movePlayer(1, 0); break;
+                    case 'ArrowDown': e.preventDefault(); moved = movePlayer(0, 1); break;
+                    case 'w': case 'W': e.preventDefault(); moved = movePlayer(0, -1); break;
+                    case 'a': case 'A': e.preventDefault(); moved = movePlayer(-1, 0); break;
+                    case 'd': case 'D': e.preventDefault(); moved = movePlayer(1, 0); break;
+                    case 's': case 'S': e.preventDefault(); moved = movePlayer(0, 1); break;
+                    case 'r': case 'R': e.preventDefault(); resetLevel(); saveGameProgress(); break;
+                    case 'n': case 'N': e.preventDefault(); nextLevel(); saveGameProgress(); break;
+                    case 'p': case 'P': e.preventDefault(); prevLevel(); saveGameProgress(); break;
+                    case 'c': case 'C': 
+                        if (e.ctrlKey || e.metaKey) {
+                            e.preventDefault();
+                            showPasswordPrompt();
+                        }
+                        break;
+                }
+                if (moved) {
+                    saveGameProgress();
+                }
+                renderBoard();
+            };
+            
+            // 控制台功能
+            submitPasswordBtn.onclick = () => {
+                if (passwordInput.value === gameState.devPassword) {
+                    showConsole();
+                    hidePasswordPrompt();
+                } else {
+                    alert('密码错误！');
+                }
+            };
+
+            passwordInput.onkeypress = (e) => {
+                if (e.key === 'Enter') {
+                    submitPasswordBtn.click();
+                }
+            };
+            
+            consoleCloseBtn.onclick = hideConsole;
+            teleportBoxesBtn.onclick = () => {
+                gameState.boxes = [...gameState.targets];
+                renderBoard();
+                saveGameProgress();
+            };
+            winGameBtn.onclick = () => {
+                gameState.boxes = [...gameState.targets];
+                renderBoard();
+                saveGameProgress();
+                setTimeout(() => {
+                    nextLevel();
+                    saveGameProgress();
+                }, 100);
+            };
+            resetPosBtn.onclick = () => {
+                resetLevel();
+                saveGameProgress();
+            };
+
+            // 直达关卡功能
+            jumpLevelBtn.onclick = () => {
+                const targetLevel = parseInt(jumpLevelInput.value);
+                if (targetLevel >= 1 && targetLevel <= levels.length) {
+                    loadLevel(targetLevel - 1);
+                    renderBoard();
+                    saveGameProgress();
+                    jumpLevelInput.value = '';
+                } else {
+                    alert(`请输入1-${levels.length}之间的关卡号`);
+                }
+            };
+
+            jumpLevelInput.onkeypress = (e) => {
+                if (e.key === 'Enter') {
+                    jumpLevelBtn.click();
+                }
+            };
+        }
+
+// 开始游戏
+initGame();
+// 第260行
+</script>
+</body>
+</html>
+
